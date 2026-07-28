@@ -68,3 +68,11 @@ export function isLastQuestion(currentIndex: number, total: number): boolean {
   if (total <= 0) return true;
   return currentIndex >= total - 1;
 }
+
+/** Whether a category slug exists in a given list of categories. */
+export function isValidCategorySlug(
+  slug: string,
+  categories: { slug: string }[],
+): boolean {
+  return categories.some((c) => c.slug === slug);
+}
