@@ -31,3 +31,23 @@ export function parseQuestionCount(
   if (parsed > max) return max;
   return parsed;
 }
+
+/**
+ * Progress through the deck as a 0-100 percentage, based on the displayed
+ * (1-indexed) card position — card index 0 of 21 renders as ~5%, not 0%, so
+ * the progress bar always shows a visible sliver once the game has started.
+ */
+export function calculateProgress(currentIndex: number, total: number): number {
+  if (total <= 0) return 0;
+  const displayed = Math.min(Math.max(currentIndex, 0), total - 1) + 1;
+  return Math.round((displayed / total) * 100);
+}
+
+/** Formats a zero-padded "07 / 21" counter for the currently displayed card. */
+export function formatCounter(currentIndex: number, total: number): string {
+  const safeTotal = Math.max(total, 0);
+  const displayed =
+    Math.min(Math.max(currentIndex, 0), Math.max(safeTotal - 1, 0)) + 1;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(displayed)} / ${pad(safeTotal)}`;
+}
