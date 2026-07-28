@@ -10,6 +10,11 @@
       "onAutoForward": "openPreview"
     }
   },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
   "postCreateCommand": "npm install",
   "customizations": {
     "vscode": {
