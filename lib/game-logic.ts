@@ -76,3 +76,90 @@ export function isValidCategorySlug(
 ): boolean {
   return categories.some((c) => c.slug === slug);
 }
+
+export type QuestionBankIssueType =
+  | "duplicate-text"
+  | "unknown-category"
+  | "empty-text"
+  | "duplicate-category-slug"
+  | "text-too-long";
+
+export interface QuestionBankIssue {
+  type: QuestionBankIssueType;
+  detail: string;
+}
+
+export interface QuestionBankValidation {
+  valid: boolean;
+  issues: QuestionBankIssue[];
+  countsByCategory: Record<string, number>;
+  totalQuestions: number;
+}
+
+/**
+ * Validates the raw question bank before it's ever written to MongoDB:
+ * every question must reference a real category, have non-empty and
+ * reasonably-sized text, and not duplicate another question's text within
+ * the same category. Category slugs themselves must be unique.
+ *
+ * This is what `tests/unit/seed-questions.test.ts` runs against the actual
+ * shipped dataset, so a typo'd category slug or an accidental copy-paste
+ * duplicate fails the test suite instead of silently shipping.
+ */
+export function validateQuestionBank(
+  questions: { text: string; category: string }[],
+  categories: { slug: string }[],
+  maxTextLength = 240,
+): QuestionBankValidation {
+  const issues: QuestionBankIssue[] = [];
+  const categorySlugSet = new Set(categories.map((c) => c.slug));
+
+  const seenSlugs = new Set<string>();
+  for (const c of categories) {
+    if (seenSlugs.has(c.slug)) {
+      issues.push({ type: "duplicate-category-slug", detail: c.slug });
+    }
+    seenSlugs.add(c.slug);
+  }
+
+  const countsByCategory: Record<string, number> = {};
+  const seenTextByCategory = new Map<string, Set<string>>();
+
+  for (const q of questions) {
+    const trimmed = q.text.trim();
+
+    if (trimmed.length === 0) {
+      issues.push({ type: "empty-text", detail: `(category: ${q.category})` });
+    }
+    if (trimmed.length > maxTextLength) {
+      issues.push({
+        type: "text-too-long",
+        detail: `${trimmed.slice(0, 40)}… (${trimmed.length} chars)`,
+      });
+    }
+    if (!categorySlugSet.has(q.category)) {
+      issues.push({
+        type: "unknown-category",
+        detail: `"${trimmed.slice(0, 40)}" -> ${q.category}`,
+      });
+    }
+
+    countsByCategory[q.category] = (countsByCategory[q.category] ?? 0) + 1;
+
+    const normalized = trimmed.toLowerCase();
+    const seenForCategory =
+      seenTextByCategory.get(q.category) ?? new Set<string>();
+    if (seenForCategory.has(normalized)) {
+      issues.push({ type: "duplicate-text", detail: trimmed });
+    }
+    seenForCategory.add(normalized);
+    seenTextByCategory.set(q.category, seenForCategory);
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    countsByCategory,
+    totalQuestions: questions.length,
+  };
+}
