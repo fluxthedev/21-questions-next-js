@@ -51,3 +51,20 @@ export function formatCounter(currentIndex: number, total: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(displayed)} / ${pad(safeTotal)}`;
 }
+
+/** Next card index, clamped so it never runs past the last card. */
+export function getNextIndex(currentIndex: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.min(currentIndex + 1, total - 1);
+}
+
+/** Previous card index, clamped so it never goes below the first card. */
+export function getPreviousIndex(currentIndex: number): number {
+  return Math.max(currentIndex - 1, 0);
+}
+
+/** Whether the currently displayed card is the last one in the deck. */
+export function isLastQuestion(currentIndex: number, total: number): boolean {
+  if (total <= 0) return true;
+  return currentIndex >= total - 1;
+}
